@@ -5,10 +5,10 @@ echo ==== NMKD'S FLOWFRAMES PACKAGING SCRIPT ====
 echo ============================================
 echo.
 
-set /p ver="Enter the version number: "
-set /p packSlim="Package Slim (no Pytorch) archive? (Y/N) "
-set /p packFull="Package Full (with Pytorch for Ampere and older) archive? (Y/N) "
-set /p packWebBase="Package web installer (base.7z) file? (Y/N) "
+set ver="3b56032"
+set packSlim="Y"
+set packFull="N"
+set packWebBase="N"
 
 cd ..\Code\bin\x64\Release
 
