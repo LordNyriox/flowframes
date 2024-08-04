@@ -55,8 +55,8 @@ jobs:
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform="x64" ${{env.SOLUTION_FILE_PATH}}
 
     - name: Build Package
-      working-directory: ${{env.GITHUB_WORKSPACE}}\Build
-      run: cmd /C CALL .\PackageBuild.bat ${{steps.vars.outputs.sha_short}} Y N N
+      working-directory: .\Build
+      run: cmd /C CALL PackageBuild.bat ${{steps.vars.outputs.sha_short}} Y N N
 
     - name: Upload Package
       uses: actions/upload-artifact@v4
