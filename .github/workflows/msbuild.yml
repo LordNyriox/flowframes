@@ -35,6 +35,12 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
+    - name: Add NuGet to PATH
+      uses: nuget/setup-nuget@v2
+ 
+    - name: NuGet Restore
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
     - name: Build 64-Bit
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
