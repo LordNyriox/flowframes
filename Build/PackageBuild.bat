@@ -1,4 +1,4 @@
-@echo off
+rem @echo off
 
 echo ============================================
 echo ==== NMKD'S FLOWFRAMES PACKAGING SCRIPT ====
@@ -13,6 +13,11 @@ set packFull="%3"
 if "%packFull%"=="" set /p packFull="Package Full (with Pytorch for Ampere and older) archive? (Y/N) "
 set packWebBase="%4"
 if "%packWebBase%"=="" set /p packWebBase="Package web installer (base.7z) file? (Y/N) "
+
+echo ver "%ver%"
+echo packSlim "%packSlim%"
+echo packFull "%packFull%"
+echo packWebBase "%packWebBase%"
 
 cd ..\Code\bin\x64\Release
 
