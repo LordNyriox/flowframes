@@ -32,7 +32,7 @@ jobs:
       id: vars
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $env:GITHUB_OUTPUT
     #- name: Check Commit SHA
-      run: echo ${{steps.vars.outputs.sha_short}}
+    #  run: echo ${{steps.vars.outputs.sha_short}}
 
     - name: Add Python to PATH
       uses: actions/setup-python@v5
@@ -44,13 +44,12 @@ jobs:
 
     - name: Add NuGet to PATH
       uses: nuget/setup-nuget@v2
-      
+
     - name: NuGet Restore
       run: nuget restore ${{env.SOLUTION_FILE_PATH}}
 
     - name: Build Flowframes
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform="x64" ${{env.SOLUTION_FILE_PATH}}
 
