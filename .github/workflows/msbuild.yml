@@ -82,4 +82,4 @@ jobs:
       with:
         if-no-files-found: error
         name: Flowframes
-        path: ./**/FF-${{steps.vars.outputs.sha_short}}-Slim.7z
+        path: ./**/FF-${{steps.vars.outputs.sha_short}}-Full-RTX3000.7z
