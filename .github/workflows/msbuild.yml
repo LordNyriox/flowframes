@@ -64,7 +64,7 @@ jobs:
         curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
         ./python.exe get-pip.py
         ./python -m pip install numpy==1.19.3
-        ./python -m pip install torch==1.8.1+cu{{env.CUDA_VERSION}} torchvision==0.9.1+cu{{env.CUDA_VERSION}} -f https://download.pytorch.org/whl/torch_stable.html
+        ./python -m pip install torch==1.8.1+cu${{env.CUDA_VERSION}} torchvision==0.9.1+cu${{env.CUDA_VERSION}} -f https://download.pytorch.org/whl/torch_stable.html
         ./python.exe -m pip install opencv-python sk-video imageio
         ls
 
