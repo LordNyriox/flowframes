@@ -57,7 +57,7 @@ jobs:
       shell: bash
       run: |
         cd ./pkgs
-        curl https://raw.githubusercontent.com/adang1345/PythonWindows/blob/master/3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}/python-3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}-embed-amd64.zip -o py-embed.zip
+        curl -H 'Accept: application/vnd.github.v4.raw' https://api.github.com/repos/adang1345/PythonWindows/contents/3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}/python-3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}-embed-amd64.zip\?ref\=master -o py-embed.zip
         unzip py-embed.zip -d py-amp
         cd py-amp
         echo 'import site' >> ./python3${{env.PYTHON_MINOR}}._pth
