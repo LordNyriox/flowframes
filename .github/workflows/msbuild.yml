@@ -54,8 +54,8 @@ jobs:
       run: |
         Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process
         Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jtmoon79/PythonEmbed4Win/main/PythonEmbed4Win.ps1" -OutFile "PythonEmbed4Win.ps1"
-        (Get-Content .\PythonEmbed4Win.ps1) -replace 'www\.python.org\/ftp\/python', 'raw.githubusercontent.com/adang1345/PythonWindows/blob/master' | Set-Content .\PythonEmbed4Win.ps1
-        (Get-Content .\PythonEmbed4Win.ps1) -replace '3\.8\.10', '3.8.19' | Set-Content .\PythonEmbed4Win.ps1
+        (Get-Content .\PythonEmbed4Win.ps1) -replace 'www\.python.org\/ftp\/python', 'raw.githubusercontent.com/adang1345/PythonWindows/master' | Set-Content .\PythonEmbed4Win.ps1
+        (Get-Content .\PythonEmbed4Win.ps1) -replace '3\.${{env.PYTHON_MINOR}}\.${{env.PYTHON_PATCH_PATH}}', '3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}' | Set-Content .\PythonEmbed4Win.ps1
         .\PythonEmbed4Win.ps1 -Version 3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}} -Path py-amp -Arch amd64
 
     - name: Embed PyTorch
