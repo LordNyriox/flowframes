@@ -17,6 +17,11 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
 
+  CUDA_VERSION: 111
+  PYTHON_MINOR: 8
+  PYTHON_PATCH: 19
+  PYTHON_PATCH_SETUP: 10
+
 permissions:
   contents: read
 
@@ -37,7 +42,7 @@ jobs:
     - name: Add Python to PATH
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: 3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH_SETUP}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -48,6 +53,21 @@ jobs:
     - name: NuGet Restore
       run: nuget restore ${{env.SOLUTION_FILE_PATH}}
 
+    - name: Build Python
+      shell: bash
+      run: |
+        cd ./pkgs
+        curl https://raw.githubusercontent.com/adang1345/PythonWindows/blob/master/3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}/python-3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}-embed-amd64.zip -o py-embed.zip
+        unzip py-embed.zip -d py-amp
+        cd py-amp
+        echo 'import site' >> ./python3${{env.PYTHON_MINOR}}._pth
+        curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+        ./python.exe get-pip.py
+        ./python -m pip install numpy==1.19.3
+        ./python -m pip install torch==1.8.1+cu{{env.CUDA_VERSION}} torchvision==0.9.1+cu{{env.CUDA_VERSION}} -f https://download.pytorch.org/whl/torch_stable.html
+        ./python.exe -m pip install opencv-python sk-video imageio
+        ls
+
     - name: Build Flowframes
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
@@ -55,7 +75,7 @@ jobs:
 
     - name: Build Package
       working-directory: .\Build
-      run: cmd /C CALL PackageBuild.bat ${{steps.vars.outputs.sha_short}} Y N N
+      run: cmd /C CALL PackageBuild.bat ${{steps.vars.outputs.sha_short}} N Y N
 
     - name: Upload Package
       uses: actions/upload-artifact@v4
