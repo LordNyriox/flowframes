@@ -17,9 +17,11 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
 
+  # Python version to embed.
   PYTHON_MINOR: 8
   PYTHON_PATCH: 19
-  PYTHON_PATCH_PATH: 10
+  # Python version to use for building.
+  PYTHON_PATCH_SYS: 10
 
 permissions:
   contents: read
@@ -41,7 +43,7 @@ jobs:
     - name: Add Python to PATH
       uses: actions/setup-python@v5
       with:
-        python-version: 3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH_PATH}}
+        python-version: 3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH_SYS}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -55,7 +57,6 @@ jobs:
         Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process
         Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jtmoon79/PythonEmbed4Win/main/PythonEmbed4Win.ps1" -OutFile "PythonEmbed4Win.ps1"
         (Get-Content .\PythonEmbed4Win.ps1) -replace 'www\.python.org\/ftp\/python', 'raw.githubusercontent.com/adang1345/PythonWindows/master' | Set-Content .\PythonEmbed4Win.ps1
-        (Get-Content .\PythonEmbed4Win.ps1) -replace '3\.${{env.PYTHON_MINOR}}\.${{env.PYTHON_PATCH_PATH}}', '3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}}' | Set-Content .\PythonEmbed4Win.ps1
         .\PythonEmbed4Win.ps1 -Version 3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH}} -Path py-amp -Arch amd64
 
     - name: Embed PyTorch
@@ -73,6 +74,7 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform="x64" ${{env.SOLUTION_FILE_PATH}}
 
+    # Syntax: PackageBuild.bat <version> <build_slim> <build_full> <build_installer>
     - name: Build Package
       working-directory: .\Build
       run: cmd /C CALL PackageBuild.bat ${{steps.vars.outputs.sha_short}} N Y N
@@ -81,5 +83,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         if-no-files-found: error
-        name: Flowframes
-        path: ./**/FF-${{steps.vars.outputs.sha_short}}-Full-RTX3000.7z
+        name: FF-${{steps.vars.outputs.sha_short}}-Full
+        path: ./Build/FF-${{steps.vars.outputs.sha_short}}-Full-RTX3000.7z
