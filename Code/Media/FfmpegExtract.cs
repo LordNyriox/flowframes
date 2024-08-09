@@ -1,4 +1,4 @@
-﻿using Flowframes.Data;
+using Flowframes.Data;
 using Flowframes.IO;
 using Flowframes.Main;
 using Flowframes.MiscUtils;
@@ -64,20 +64,20 @@ namespace Flowframes.Media
             }
             else if (extension == "jpg")
             {
-                // Fallback to YUV420P if not in list of supported formats
+                // Fallback to YUV444P if not in list of supported formats
                 if (!new[] { "yuv420p", "yuv422p", "yuv444p" }.Contains(pixFmt.Replace("yuvj", "yuv")))
                 {
-                    pixFmt = "yuv420p";
+                    pixFmt = "yuv444p";
                 }
 
-                args = $"-q:v 1 -qmin 1 -color_range pc";
+                args = $"-q:v 1 -qmin 1";
             }
             else if (extension == "tiff")
             {
-                // Fallback to YUV420P if not in list of supported formats
+                // Fallback to YUV444P if not in list of supported formats
                 if (!new[] { "rgb24", "rgb48le", "pal8", "rgba", "yuv420p", "yuv422p", "yuv440p", "yuv444p" }.Contains(pixFmt))
                 {
-                    pixFmt = inputHighBitDepth && outputHighBitDepth ? "rgb48le" : "yuv420p";
+                    pixFmt = inputHighBitDepth && outputHighBitDepth ? "rgb48le" : "yuv444p";
                 }
             }
             else if (extension == "webp")
