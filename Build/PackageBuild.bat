@@ -5,12 +5,17 @@ echo ==== NMKD'S FLOWFRAMES PACKAGING SCRIPT ====
 echo ============================================
 echo.
 
-set /p ver="Enter the version number: "
-set /p packSlim="Package Slim (no Pytorch) archive? (Y/N) "
-set /p packFull="Package Full (with Pytorch for Ampere and older) archive? (Y/N) "
-set /p packWebBase="Package web installer (base.7z) file? (Y/N) "
+set "ver=%1"
+set "packSlim=%2"
+set "packFull=%3"
+set "packWebBase=%4"
 
-cd ..\Code\bin\x64\Release
+if "%ver%"=="" set /p ver="Enter the version number: "
+if "%packSlim%"=="" set /p packSlim="Package Slim (no Pytorch) archive? (Y/N) "
+if "%packFull%"=="" set /p packFull="Package Full (with Pytorch for Ampere and older) archive? (Y/N) "
+if "%packWebBase%"=="" set /p packWebBase="Package web installer (base.7z) file? (Y/N) "
+
+cd ..\CodeLegacy\bin\x64\Release
 
 rmdir /s/q FlowframesApp%ver%
 mkdir "FlowframesApp%ver%"
@@ -33,13 +38,13 @@ xcopy Flowframes.exe "FlowframesApp%ver%"
 
 cd ../../../../Build
 
-rmdir /s/q ..\Code\bin\x64\Release\FlowframesApp%ver%\FlowframesData\logs
-del ..\Code\bin\x64\Release\FlowframesApp%ver%\FlowframesData\config.ini
+rmdir /s/q ..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%\FlowframesData\logs
+del ..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%\FlowframesData\config.ini
 
 
 IF /I "%packSlim%"=="Y" (
 	rem PACK SLIM
-	7za.exe a FF-%ver%-Slim.7z -m0=flzma2 -mx5 "..\Code\bin\x64\Release\FlowframesApp%ver%"
+	7za.exe a FF-%ver%-Slim.7z -m0=flzma2 -mx5 "..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%"
 )
 
 echo 1
@@ -47,16 +52,16 @@ IF /I "%packWebBase%"=="Y" (
 	echo 2
 	rem PACK WEB BASE
 	rem mkdir "WebInstaller/%ver%/base.7z"
-	7za.exe a "WebInstaller/%ver%/base.7z" -m0=flzma2 -mx7 "..\Code\bin\x64\Release\FlowframesApp%ver%\*"
+	7za.exe a "WebInstaller/%ver%/base.7z" -m0=flzma2 -mx7 "..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%\*"
 )
 
 IF /I "%packFull%"=="Y" (
-	xcopy "../pkgs/py-amp" "..\Code\bin\x64\Release\FlowframesApp%ver%\FlowframesData\pkgs\py-amp" /E /I
-	7za.exe a FF-%ver%-Full-RTX3000.7z -m0=flzma2 -mx7 "..\Code\bin\x64\Release\FlowframesApp%ver%"
-	rmdir /s/q ..\Code\bin\x64\Release\FlowframesApp%ver%\FlowframesData\pkgs\py-amp
+	xcopy "../pkgs/py-amp" "..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%\FlowframesData\pkgs\py-amp" /E /I
+	7za.exe a FF-%ver%-Full-RTX3000.7z -m0=flzma2 -mx7 "..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%"
+	rmdir /s/q ..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%\FlowframesData\pkgs\py-amp
 )
 
-rmdir /s/q ..\Code\bin\x64\Release\FlowframesApp%ver%
+rmdir /s/q ..\CodeLegacy\bin\x64\Release\FlowframesApp%ver%
 
 
 rem pause
