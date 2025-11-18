@@ -107,24 +107,22 @@ namespace Flowframes.Forms
             this.panel1.Controls.Add(this.configDataGrid);
             this.panel1.Location = new System.Drawing.Point(6, 80);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(180, 0);
+            this.panel1.Size = new System.Drawing.Size(900, 310);
             this.panel1.TabIndex = 4;
             // 
             // configDataGrid
             // 
             this.configDataGrid.AllowUserToResizeColumns = false;
             this.configDataGrid.AllowUserToResizeRows = false;
-            this.configDataGrid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.configDataGrid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.AllCells;
             this.configDataGrid.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
             this.configDataGrid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
             this.configDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.configDataGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.configDataGrid.Location = new System.Drawing.Point(0, 0);
             this.configDataGrid.MultiSelect = false;
             this.configDataGrid.Name = "configDataGrid";
-            this.configDataGrid.Size = new System.Drawing.Size(180, 0);
+            this.configDataGrid.Size = new System.Drawing.Size(900, 310);
             this.configDataGrid.TabIndex = 0;
             this.configDataGrid.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.configDataGrid_CellValueChanged);
             this.configDataGrid.RowsAdded += new System.Windows.Forms.DataGridViewRowsAddedEventHandler(this.configDataGrid_RowsAdded);
