@@ -1,6 +1,4 @@
-﻿using Flowframes.Media;
-using Flowframes.IO;
-using System;
+﻿using Flowframes.IO;
 using System.IO;
 using System.Threading.Tasks;
 using Flowframes.MiscUtils;
@@ -83,8 +81,6 @@ namespace Flowframes.Main
                 return;
             }
 
-            if (Config.GetBool(Config.Key.sbsAllowAutoEnc) && !(await InterpolateUtils.CheckEncoderValid())) return;
-
             if (canceled) return;
             Program.mainForm.SetStatus("Running AI...");
             await RunAi(currentSettings.interpFolder, currentSettings.ai, true);
@@ -108,8 +104,6 @@ namespace Flowframes.Main
                     return;
                 }
             }
-
-            if (!(await InterpolateUtils.CheckEncoderValid())) return;
 
             string[] outFrames = IoUtils.GetFilesSorted(currentSettings.interpFolder, currentSettings.interpExt);
 

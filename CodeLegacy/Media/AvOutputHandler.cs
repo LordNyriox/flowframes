@@ -1,12 +1,7 @@
 ﻿using Flowframes.Forms.Main;
 using Flowframes.MiscUtils;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using static Flowframes.AvProcess;
 
 namespace Flowframes.Media
@@ -31,7 +26,7 @@ namespace Flowframes.Media
                 line = FormatUtils.BeautifyFfmpegStats(line);
 
             appendStr += Environment.NewLine + line;
-            Logger.Log($"{prefix} {line}", hidden, replaceLastLine, logFilename);
+            Logger.Log($"{prefix} {line}", hidden, replaceLastLine, logFilename, toConsole: Cli.Verbose || logMode != LogMode.Hidden);
 
             if (!hidden && showProgressBar && line.Contains("Time:"))
             {

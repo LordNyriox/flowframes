@@ -2,12 +2,8 @@
 using Flowframes.Data.Streams;
 using Flowframes.IO;
 using Flowframes.MiscUtils;
-using Flowframes.Os;
-using Flowframes.Properties;
-using ImageMagick;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -28,7 +24,6 @@ namespace Flowframes.Media
 
         public static async Task<int> GetStreamCount(string path)
         {
-            Logger.Log($"GetStreamCount({path})", true);
             string output = await GetFfmpegInfoAsync(path, "Stream #0:");
 
             if (string.IsNullOrWhiteSpace(output.Trim()))
@@ -179,7 +174,7 @@ namespace Flowframes.Media
                 Fraction fps = ffprobeFps.Float > 0f ? ffprobeFps : new Fraction(ffmpegFps);
                 Fraction avgFps = ffprobeFpsAvg.Float > 0f ? ffprobeFpsAvg : new Fraction(ffmpegTbr);
 
-                Logger.Log($"Ffprobe FPS: {ffprobeFps} ({ffprobeFps.GetString()}) - Ffprobe Avg FPS: {ffprobeFpsAvg} ({ffprobeFpsAvg.GetString()}) - Ffmpeg FPS: {ffmpegFps} - Ffmpeg TBR: {ffmpegTbr} - Est. FPS: {calculatedFps.ToString("0.#####")}", true);
+                Logger.Log($"[FPS Detection] ffprobe FPS: {ffprobeFps} ({ffprobeFps.GetString()}) - ffprobe avg FPS: {ffprobeFpsAvg} ({ffprobeFpsAvg.GetString()}) - ffmpeg FPS: {ffmpegFps} - ffmpeg TBR: {ffmpegTbr} - est. FPS: {calculatedFps.ToString("0.#####")}", true);
 
                 var info = new FpsInfo(fps); // Set both true FPS and average FPS to this number, assuming they match
 
@@ -192,7 +187,7 @@ namespace Flowframes.Media
 
                 if (allowFpsOverride && Math.Abs(fps.Float - calculatedFps) > fpsEstTolerance)
                 {
-                    Logger.Log($"Detected FPS {fps} is not within tolerance (+-{fpsEstTolerance}) of calculated FPS ({calculatedFps}), using estimated FPS.", true);
+                    Logger.Log($"[FPS Detection] Detected FPS {fps} is not within tolerance (+-{fpsEstTolerance}) of calculated FPS ({calculatedFps}), using estimated FPS.", true);
                     info.Fps = new Fraction(calculatedFps); // Change true FPS to the estimated FPS if the estimate does not match the specified FPS
                 }
 

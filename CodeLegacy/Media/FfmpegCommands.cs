@@ -107,18 +107,6 @@ namespace Flowframes
                 DeleteSource(inputFile);
         }
 
-        public static async Task ChangeSpeed(string inputFile, float newSpeedPercent, bool delSrc = false)
-        {
-            string pathNoExt = Path.ChangeExtension(inputFile, null);
-            string ext = Path.GetExtension(inputFile);
-            float val = newSpeedPercent / 100f;
-            string speedVal = (1f / val).ToString("0.0000").Replace(",", ".");
-            string args = " -itsscale " + speedVal + " -i \"" + inputFile + "\" -c copy \"" + pathNoExt + "-" + newSpeedPercent + "pcSpeed" + ext + "\"";
-            await RunFfmpeg(args, LogMode.OnlyLastLine);
-            if (delSrc)
-                DeleteSource(inputFile);
-        }
-
         public static async Task<long> GetDurationMs(string inputFile, MediaFile mediaFile, bool demuxInsteadOfPacketTs = false, bool allowDurationFromMetadata = true)
         {
             if (mediaFile.IsDirectory)
@@ -126,7 +114,7 @@ namespace Flowframes
 
             if (allowDurationFromMetadata)
             {
-                Logger.Log($"GetDuration({inputFile}) - Reading duration by checking metadata.", true, false, "ffmpeg");
+                Logger.Log($"[{nameof(GetDurationMs)}] Reading duration by checking metadata", true, false, "ffmpeg");
                 string argsMeta = $"ffprobe -v quiet -show_streams -select_streams v:0 -show_entries stream=duration {inputFile.Wrap()}";
                 var outputLinesMeta = NUtilsTemp.OsUtils.RunCommand($"cd /D {GetAvDir().Wrap()} && {argsMeta}").SplitIntoLines();
 
@@ -156,7 +144,7 @@ namespace Flowframes
 
             if (demuxInsteadOfPacketTs)
             {
-                Logger.Log($"GetDuration({inputFile}) - Reading duration by demuxing.", true, false, "ffmpeg");
+                Logger.Log($"[{nameof(GetDurationMs)}] Reading duration by demuxing", true, false, "ffmpeg");
                 string argsDemux = $"ffmpeg -loglevel panic -stats -i {inputFile.Wrap()} -map 0:v:0 -c copy -f null NUL";
                 var outputLinesDemux = NUtilsTemp.OsUtils.RunCommand($"cd /D {GetAvDir().Wrap()} && {argsDemux}").SplitIntoLines().Where(l => l.IsNotEmpty() && l.MatchesWildcard("*time=* *"));
 
@@ -168,7 +156,7 @@ namespace Flowframes
             }
             else
             {
-                Logger.Log($"GetDuration({inputFile}) - Reading duration using packet timestamps.", true, false, "ffmpeg");
+                Logger.Log($"[{nameof(GetDurationMs)}] Reading duration using packet timestamps", true, false, "ffmpeg");
                 string argsPackets = $"ffprobe -v error  -select_streams v:0 -show_packets -show_entries packet=pts_time -of csv=p=0 {inputFile.Wrap()}";
                 var outputLinesPackets = NUtilsTemp.OsUtils.RunCommand($"cd /D {GetAvDir().Wrap()} && {argsPackets}").SplitIntoLines().Where(l => l.IsNotEmpty()).ToList();
 
@@ -235,7 +223,7 @@ namespace Flowframes
             float maxDeviationMs = (timestampDurations.Max() - timestampDurations.Min()) * 1000f;
             float maxDeviationPercent = ((timestampDurations.Max() / timestampDurations.Min()) * 100f) - 100;
             // float maxDeviationMsResampled = (timestampDurationsRes.Max() - timestampDurationsRes.Min()) * 1000f;
-            Logger.Log($"Timestamp durations - Min: {timestampDurations.Min() * 1000f} ms - Max: {timestampDurations.Max() * 1000f} ms - Avg: {avgDuration * 1000f} - Biggest deviation: {maxDeviationMs.ToString("0.##")} ms", hidden: true);
+            Logger.Log($"[VFR Check] Timestamp durations - Min: {timestampDurations.Min() * 1000f} ms - Max: {timestampDurations.Max() * 1000f} ms - Avg: {avgDuration * 1000f} - Biggest deviation: {maxDeviationMs.ToString("0.##")} ms", hidden: true);
             // Logger.Log($"Resampled - Min ts duration: {timestampDurationsRes.Min() * 1000f} ms - Max ts duration: {timestampDurationsRes.Max() * 1000f} ms - Biggest deviation: {maxDeviationMsResampled.ToString("0.##")} ms", hidden: true);
 
             mediaFile.InputTimestampDurations = new List<float>(timestampDurations);
@@ -255,14 +243,14 @@ namespace Flowframes
 
             if (maxDeviationPercent > 20f)
             {
-                Logger.Log($"Max timestamp deviation is {maxDeviationPercent.ToString("0.##")}% or {maxDeviationMs} ms - Assuming VFR input!", hidden: true);
+                Logger.Log($"[VFR Check] Max timestamp deviation is {maxDeviationPercent.ToString("0.##")}% or {maxDeviationMs} ms - Assuming VFR input!", hidden: true);
                 mediaFile.IsVfr = true;
             }
         }
 
         public static async Task<Fraction> GetFramerate(string inputFile, bool preferFfmpeg = false)
         {
-            Logger.Log($"GetFramerate(inputFile = '{inputFile}', preferFfmpeg = {preferFfmpeg})", true, false, "ffmpeg");
+            Logger.Log($"Getting FPS from '{inputFile}', preferFfmpeg = {preferFfmpeg}", true, false, "ffmpeg");
             Fraction ffprobeFps = new Fraction(0, 1);
             Fraction ffmpegFps = new Fraction(0, 1);
 
@@ -317,7 +305,6 @@ namespace Flowframes
 
         public static Size GetSize(string inputFile)
         {
-            Logger.Log($"GetSize('{inputFile}')", true, false, "ffmpeg");
             string args = $" -v panic -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 {inputFile.Wrap()}";
             string[] outputLines = GetFfprobeOutput(args).SplitIntoLines();
 
@@ -335,21 +322,19 @@ namespace Flowframes
 
         public static async Task<int> GetFrameCountAsync(string inputFile)
         {
-            Logger.Log($"GetFrameCountAsync - Trying ffprobe packet counting first (fastest).", true, false, "ffmpeg");
+            Logger.Log($"[Get Frame Count] Trying ffprobe packet counting first (fastest).", true, false, "ffmpeg");
             int frames = await ReadFrameCountFfprobePacketCount(inputFile);      // Try reading frame count with ffprobe packet counting
             if (frames > 0) return frames;
 
-            Logger.Log($"GetFrameCountAsync - Trying ffmpeg demuxing.", true, false, "ffmpeg");
+            Logger.Log($"[Get Frame Count] Trying ffmpeg demuxing.", true, false, "ffmpeg");
             frames = await ReadFrameCountFfmpegAsync(inputFile);       // Try reading frame count with ffmpeg
             if (frames > 0) return frames;
 
-            Logger.Log($"GetFrameCountAsync - Trying ffprobe demuxing.", true, false, "ffmpeg");
+            Logger.Log($"[Get Frame Count] Trying ffprobe demuxing.", true, false, "ffmpeg");
             frames = await ReadFrameCountFfprobe(inputFile);      // Try reading frame count with ffprobe decoding
             if (frames > 0) return frames;
 
-
-
-            Logger.Log("Failed to get total frame count of video.", true);
+            Logger.Log("[Get Frame Count] Failed to get total frame count of video.", true);
             return 0;
         }
 
@@ -408,35 +393,34 @@ namespace Flowframes
             }
         }
 
-        public static async Task<VidExtraData> GetVidExtraInfo(string inputFile, bool allowColorData = true)
+        public static async Task<VidExtraData> GetVidExtraInfo(string inputFile)
         {
-            string ffprobeOutput = await GetVideoInfo.GetFfprobeInfoAsync(inputFile, GetVideoInfo.FfprobeMode.ShowBoth);
-            VidExtraData data = new VidExtraData(ffprobeOutput);
-            return data;
+            try
+            {
+                string ffprobeOutput = await GetVideoInfo.GetFfprobeInfoAsync(inputFile, GetVideoInfo.FfprobeMode.ShowBoth);
+                VidExtraData data = new VidExtraData(ffprobeOutput);
+                return data;
+            }
+            catch
+            {
+                return new VidExtraData();
+            }
         }
 
         public static async Task<bool> IsEncoderCompatible(string enc)
         {
-            Logger.Log($"IsEncoderCompatible('{enc}')", true, false, "ffmpeg");
+            if (!File.Exists(Path.Combine(AvProcess.GetAvDir(), "ffmpeg.exe")))
+            {
+                Logger.Log($"Can't check encoder '{enc}', ffmpeg not found!", true, false, "ffmpeg");
+                return false;
+            }
+
+            Logger.Log($"Running ffmpeg to check if encoder '{enc}' is available...", true, false, "ffmpeg");
             string args = $"-loglevel error -f lavfi -i color=black:s=1920x1080 -vframes 1 -c:v {enc} -f null -";
             string output = await RunFfmpeg(args, LogMode.Hidden);
-            return !output.SplitIntoLines().Where(l => !l.Lower().StartsWith("frame") && l.IsNotEmpty()).Any();
-        }
-
-        public static string GetAudioCodec(string path, int streamIndex = -1)
-        {
-            Logger.Log($"GetAudioCodec('{Path.GetFileName(path)}', {streamIndex})", true, false, "ffmpeg");
-            string stream = (streamIndex < 0) ? "a" : $"{streamIndex}";
-            string args = $"-v panic -show_streams -select_streams {stream} -show_entries stream=codec_name {path.Wrap()}";
-            string info = GetFfprobeOutput(args);
-            string[] entries = info.SplitIntoLines();
-
-            foreach (string entry in entries)
-            {
-                if (entry.Contains("codec_name="))
-                    return entry.Split('=')[1];
-            }
-            return "";
+            bool compat = !output.SplitIntoLines().Where(l => !l.Lower().StartsWith("frame") && l.IsNotEmpty()).Any();
+            Logger.Log($"Encoder '{enc}' is {(compat ? "available!" : "not available.")}", true, false, "ffmpeg");
+            return compat;
         }
 
         public static List<string> GetAudioCodecs(string path, int streamIndex = -1)

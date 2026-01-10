@@ -38,7 +38,7 @@ namespace Flowframes.Os
             }
             catch (Exception e)
             {
-                Logger.Log($"Failed to kill currentAiProcess process tree: {e.Message}", true);
+                Logger.Log($"Failed to kill process tree: {e.Message}", true);
             }
         }
 
@@ -581,7 +581,7 @@ namespace Flowframes.Os
                 return;
 
             logName = ai.LogFilename;
-            Logger.Log(line, true, false, ai.LogFilename);
+            Logger.Log(line, true, false, ai.LogFilename, toConsole: Cli.Verbose);
             void ShowErrorBox(string msg) => UiUtils.ShowMessageBox(msg, UiUtils.MessageType.Error, monospace: true);
             string lineLow = line.Lower();
 

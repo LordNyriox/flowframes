@@ -40,9 +40,14 @@ namespace Flowframes
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
+            CmdMode = Paths.GetExe().EndsWith("Cmd.exe");
             Cli.HandleCli();
             Debug = Cli.Debug || System.Diagnostics.Debugger.IsAttached;
-            CmdMode = Paths.GetExe().EndsWith("Cmd.exe");
+
+            if(CmdMode && !Cli.CanStart)
+            {
+                Environment.Exit(0);
+            }
 
             // Show splash screen
             Application.EnableVisualStyles();
@@ -98,61 +103,59 @@ namespace Flowframes
 
         public static void Cleanup()
         {
-            int keepLogsDays = 4;
+            int keepLogsDays = 7;
             int keepSessionDataDays = 4;
 
             try
             {
-                foreach (DirectoryInfo dir in new DirectoryInfo(Paths.GetLogPath(true)).GetDirectories())
-                {
-                    string[] split = dir.Name.Split('-');
-                    int daysOld = (DateTime.Now - new DateTime(split[0].GetInt(), split[1].GetInt(), split[2].GetInt())).Days;
-                    int fileCount = dir.GetFiles("*", SearchOption.AllDirectories).Length;
-
-                    if (daysOld > keepLogsDays || fileCount < 1) // keep logs for 4 days
-                    {
-                        Logger.Log($"Cleanup: Log folder {dir.Name} is {daysOld} days old and has {fileCount} files - Will Delete", true);
-                        IoUtils.TryDeleteIfExists(dir.FullName);
-                    }
-                }
-
+                CleanupOldDirectories(Paths.GetLogPath(true), keepLogsDays, "log");
+                
                 IoUtils.DeleteContentsOfDir(Paths.GetSessionDataPath()); // Clear this session's temp files...
+                
+                CleanupOldDirectories(Paths.GetSessionsPath(), keepSessionDataDays, "session");
 
-                foreach (DirectoryInfo dir in new DirectoryInfo(Paths.GetSessionsPath()).GetDirectories())
-                {
-                    string[] split = dir.Name.Split('-');
-                    int daysOld = (DateTime.Now - new DateTime(split[0].GetInt(), split[1].GetInt(), split[2].GetInt())).Days;
-                    int fileCount = dir.GetFiles("*", SearchOption.AllDirectories).Length;
-
-                    if (daysOld > keepSessionDataDays || fileCount < 1) // keep temp files for 2 days
-                    {
-                        Logger.Log($"Cleanup: Session folder {dir.Name} is {daysOld} days old and has {fileCount} files - Will Delete", true);
-                        IoUtils.TryDeleteIfExists(dir.FullName);
-                    }
-                }
-
-                IoUtils.GetFilesSorted(Paths.GetPkgPath(), false, "*.log*").ToList().ForEach(x => IoUtils.TryDeleteIfExists(x));
+                List<string> delPaths = IoUtils.GetFilesSorted(Paths.GetPkgPath(), false, "*.log*").ToList();
                 string crashDumpsDir = Path.Combine(Environment.ExpandEnvironmentVariables("%LOCALAPPDATA%"), "CrashDumps");
-                IoUtils.GetFilesSorted(crashDumpsDir, false, "rife*.exe.*.dmp").ToList().ForEach(x => IoUtils.TryDeleteIfExists(x));
-                IoUtils.GetFilesSorted(crashDumpsDir, false, "flowframes*.exe.*.dmp").ToList().ForEach(x => IoUtils.TryDeleteIfExists(x));
+                delPaths.AddRange(IoUtils.GetFilesSorted(crashDumpsDir, false, "rife*.exe.*.dmp").ToList());
+                delPaths.AddRange(IoUtils.GetFilesSorted(crashDumpsDir, false, "flowframes*.exe.*.dmp").ToList());
 
                 string installerTempDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FlowframesInstallerTemp");
                 if (Directory.Exists(installerTempDir) && (DateTime.Now - Directory.GetLastWriteTime(installerTempDir)).TotalDays > 1d)
                 {
-                    IoUtils.TryDeleteIfExists(installerTempDir);
+                    delPaths.Add(installerTempDir);
                 }
 
-                foreach (var cacheFile in IoUtils.GetFileInfosSorted(Paths.GetCachePath(), true))
-                {
-                    if ((DateTime.Now - cacheFile.LastWriteTime).TotalDays > 3d)
-                    {
-                        IoUtils.TryDeleteIfExists(cacheFile.FullName);
-                    }
-                }
+                delPaths.AddRange(IoUtils.GetFileInfosSorted(Paths.GetCachePath(), true).Where(cf => (DateTime.Now - cf.LastWriteTime).TotalDays > 3d).Select(cf => cf.FullName));
+
+                delPaths.ForEach(p => IoUtils.TryDeleteIfExists(p));
             }
             catch (Exception e)
             {
                 Logger.Log($"Cleanup Error: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        private static void CleanupOldDirectories(string basePath, int keepDays, string folderType)
+        {
+            foreach (DirectoryInfo dir in new DirectoryInfo(basePath).GetDirectories())
+            {
+                int fileCount = dir.GetFiles("*", SearchOption.AllDirectories).Length;
+
+                if (fileCount < 1)
+                {
+                    Logger.Log($"[Cleanup] Deleting {folderType} folder {dir.Name} (is empty)", true);
+                    IoUtils.TryDeleteIfExists(dir.FullName);
+                    continue;
+                }
+
+                string[] split = dir.Name.Split('-');
+                int daysOld = (DateTime.Now - new DateTime(split[0].GetInt(), split[1].GetInt(), split[2].GetInt())).Days;
+
+                if (daysOld > keepDays)
+                {
+                    Logger.Log($"[Cleanup] Deleting {folderType} folder {dir.Name} (is {daysOld} days old, {folderType} folders are only kept for {keepDays} days)", true);
+                    IoUtils.TryDeleteIfExists(dir.FullName);
+                }
             }
         }
 
@@ -182,7 +185,7 @@ namespace Flowframes
 
                     // Logger.Log($"Disk space check for '{drivePath}/': {spaceGb} GB free, next check in {nextWaitTimeMs / 1024} sec", true);
 
-                    if (!Interpolate.canceled && OsUtils.IsStillRunning(() => AiProcess.lastAiProcess) && lowDiskSpace)
+                    if (!Interpolate.canceled && (AiProcess.lastAiProcess != null && !AiProcess.lastAiProcess.HasExited) && lowDiskSpace)
                     {
                         if (tooLowDiskSpace)
                         {

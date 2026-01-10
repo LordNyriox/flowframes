@@ -1,6 +1,5 @@
 ﻿using Flowframes.Data;
 using Flowframes.Forms;
-using Flowframes.IO;
 using Flowframes.Main;
 using Flowframes.Os;
 using System;
@@ -171,7 +170,6 @@ namespace Flowframes.Ui
             using (var testFont = new System.Drawing.Font(font, 8))
             {
                 bool isInstalled = string.Equals(font, testFont.Name, StringComparison.InvariantCultureIgnoreCase);
-                Logger.Log($"Font is {(isInstalled ? "" : "not ")}available: {font}", true);
                 _fontAvailabilityCache[font] = isInstalled;
                 return isInstalled;
             }
