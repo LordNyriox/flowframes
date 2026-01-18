@@ -458,7 +458,30 @@ namespace Flowframes.Media
                 case Enums.Output.Format.Avi: supported = formatsAvi.Contains(alias); break;
             }
 
-            Logger.Log($"Checking if {outFormat} supports audio format '{format}' ({alias}): {supported}", true, false, "ffmpeg");
+            // Logger.Log($"Checking if {outFormat} supports audio format '{format}' ({alias}): {supported}", true, false, "ffmpeg");
+            return supported;
+        }
+
+        public static bool ContainerSupportsSubtitleCodec(Enums.Output.Format outFormat, string codec)
+        {
+            bool supported = false;
+
+            string[] formatsMp4 = new string[] { "mov_text" };
+            string[] formatsMkv = new string[] { "subrip", "ass", "ssa", "dvdsub", "hdmv_pgs_subtitle", "webvtt", "dvbsub" };
+            string[] formatsWebm = new string[] { "webvtt" };
+            string[] formatsMov = new string[] { "mov_text" };
+            string[] formatsAvi = new string[] { "xsub" };
+
+            switch (outFormat)
+            {
+                case Enums.Output.Format.Mp4: supported = formatsMp4.Contains(codec); break;
+                case Enums.Output.Format.Mkv: supported = formatsMkv.Contains(codec); break;
+                case Enums.Output.Format.Webm: supported = formatsWebm.Contains(codec); break;
+                case Enums.Output.Format.Mov: supported = formatsMov.Contains(codec); break;
+                case Enums.Output.Format.Avi: supported = formatsAvi.Contains(codec); break;
+            }
+
+            // Logger.Log($"Checking if {outFormat} supports subtitle format '{codec}': {supported}", true, false, "ffmpeg");
             return supported;
         }
 
@@ -499,44 +522,116 @@ namespace Flowframes.Media
             return "unsupported";
         }
 
-        public static async Task<string> GetAudioFallbackArgs(string videoPath, Enums.Output.Format outFormat, float itsScale)
+        public static string GetAudioFallbackArgs(Enums.Output.Format outFormat, int ac, int relIdx)
         {
-            bool opusMp4 = Config.GetBool(Config.Key.allowOpusInMp4);
             int opusBr = Config.GetInt(Config.Key.opusBitrate, 128);
             int aacBr = Config.GetInt(Config.Key.aacBitrate, 160);
-            int ac = (await GetVideoInfo.GetFfprobeInfoAsync(videoPath, GetVideoInfo.FfprobeMode.ShowStreams, "channels", 0)).GetInt();
-            string af = GetAudioFilters(itsScale);
 
-            if (outFormat == Enums.Output.Format.Mkv || outFormat == Enums.Output.Format.Webm || (outFormat == Enums.Output.Format.Mp4 && opusMp4))
-                return $"-c:a libopus -b:a {(ac > 4 ? $"{opusBr * 2}" : $"{opusBr}")}k -ac {(ac > 0 ? $"{ac}" : "2")} {af}"; // Double bitrate if 5ch or more, ignore ac if <= 0
+            if (outFormat == Enums.Output.Format.Mkv || outFormat == Enums.Output.Format.Webm || (outFormat == Enums.Output.Format.Mp4))
+                return $"-c:a:{relIdx} libopus -b:a:{relIdx} {(ac > 4 ? $"{opusBr * 2}" : $"{opusBr}")}k -ac:a:{relIdx} {(ac > 0 ? $"{ac}" : "2")}"; // Double bitrate if 5ch or more, ignore ac if <= 0
             else
-                return $"-c:a aac -b:a {(ac > 4 ? $"{aacBr * 2}" : $"{aacBr}")}k -aac_coder twoloop -ac {(ac > 0 ? $"{ac}" : "2")} {af}";
+                return $"-c:a:{relIdx} aac -b:a:{relIdx} {(ac > 4 ? $"{aacBr * 2}" : $"{aacBr}")}k -aac_coder twoloop -ac:a:{relIdx} {(ac > 0 ? $"{ac}" : "2")}";
+        }
+
+        public static string MapAudio(MediaFile m, Enums.Output.Format outFormat, float itsScale)
+        {
+            if (m.AudioStreams.Count == 0)
+                return "";
+
+            string filters = GetAudioFilters(itsScale);
+            Dictionary<string, bool> supported = new Dictionary<string, bool>();
+
+            foreach (var a in m.AudioStreams)
+            {
+                supported[a.Codec] = filters.IsEmpty() && ContainerSupportsAudioFormat(outFormat, a.Codec); // Filters = Re-encoding required
+            }
+            
+            // If all are supported, simply copy all streams
+            if (supported.All(x => x.Value))
+            {
+                Logger.Log($"All audio codecs are supported by {outFormat}, copying all.", true, false);
+                return "-map 1:a -c:a copy";
+            }
+
+            // Otherwise, map each stream individually
+            string log = "";
+            string args = "";
+            int relIdx = 0;
+            foreach (var a in m.AudioStreams)
+            {
+                args += $"-map 1:{a.Index} {(supported[a.Codec] ? $"-c:a:{relIdx} copy " : $"{GetAudioFallbackArgs(outFormat, a.Channels, relIdx)} ")}";
+                log += $"[{a.Codec} => {(supported[a.Codec] ? "copy" : "convert")}] - ";
+                relIdx++;
+            }
+
+            Logger.Log($"{outFormat} audio handling: {log.TrimEnd(' ', '-')}", true, false);
+            return args.TrimEnd();
         }
 
         private static string GetAudioFilters(float itsScale)
         {
-            if (itsScale == 0 || itsScale == 1)
+            if (itsScale <= 0.0001 || itsScale == 1)
                 return "";
-
             if (itsScale > 4)
-                return $"-af atempo=0.5,atempo=0.5,atempo={((1f / itsScale) * 4).ToString()}";
-            else if (itsScale > 2)
-                return $"-af atempo=0.5,atempo={((1f / itsScale) * 2).ToString()}";
-            else
-                return $"-af atempo={(1f / itsScale).ToString()}";
+                return $"-af atempo=0.5,atempo=0.5,atempo={((1f / itsScale) * 4)}";
+            if (itsScale > 2)
+                return $"-af atempo=0.5,atempo={((1f / itsScale) * 2)}";
+            return $"-af atempo={(1f / itsScale)}";
         }
 
-        public static string GetSubCodecForContainer(string containerExt)
+        public static string MapSubtitles(MediaFile m, Enums.Output.Format outFormat)
         {
-            containerExt = containerExt.Remove(".");
+            if(m.SubtitleStreams.Count == 0)
+                return "";
 
-            if (containerExt == "mp4" || containerExt == "mov")
+            Dictionary<string, string> codec = new Dictionary<string, string>();
+
+            foreach (var a in m.SubtitleStreams)
+            {
+                codec[a.Codec] = GetSubCodecForContainer(outFormat, a.Codec);
+            }
+
+            // If all are supported, simply copy all streams
+            if (codec.All(x => x.Value == "copy"))
+            {
+                Logger.Log($"All subtitle codecs are supported by {outFormat}, copying all.", true, false);
+                return "-map 1:s -c:s copy";
+            }
+
+            // Otherwise, map each stream individually
+            string log = "";
+            string args = "";
+            int relIdx = 0;
+            foreach (var s in m.SubtitleStreams)
+            {
+                args += codec[s.Codec].IsEmpty() ? "" : $"-map 1:{s.Index} -c:s:{relIdx} {codec[s.Codec]} ";
+                log += $"[{s.Codec} => {(codec[s.Codec].IsEmpty() ? "drop" : (codec[s.Codec] == "copy" ? "copy" : "convert"))}] - ";
+                relIdx++;
+            }
+
+            Logger.Log($"{outFormat} subtitle handling: {log.TrimEnd(' ', '-')}", true, false);
+            return args.TrimEnd();
+        }
+
+        public static string GetSubCodecForContainer(Enums.Output.Format outFormat, string codec)
+        {
+            bool muxSupport = ContainerSupportsSubtitleCodec(outFormat, codec);
+
+            if (muxSupport)
+                return "copy";
+
+            var textCodecs = new List<string> { "text", "ssa", "mov_text", "srt", "subrip", "webvtt", "ass", "hdmv_text_subtitle", "ttml" };
+
+            if(!textCodecs.Contains(codec))
+                return ""; // -> Won't be included
+
+            if (outFormat == Enums.Output.Format.Mp4 || outFormat == Enums.Output.Format.Mov)
                 return "mov_text";
 
-            if (containerExt == "webm")
+            if (outFormat == Enums.Output.Format.Webm)
                 return "webvtt";
 
-            return "copy";    // Default: Copy subs
+            return ""; // -> Won't be included
         }
 
         public static bool ContainerSupportsSubs(string containerExt, bool showWarningIfNotSupported = true)
