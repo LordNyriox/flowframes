@@ -100,7 +100,7 @@ namespace Flowframes.Os
             args.Add(("targetMatch", targetFrameCountMatchDuration));
 
             args = args.Where(a => a.Item2.ToString() != "False" && a.Item2.ToString() != "").ToList();
-            return string.Join(" ", args.Select(a => $"--arg {a.Item1}={a.Item2.ToString().Wrap()}"));
+            return string.Join(" ", args.Select(a => $"-a {a.Item1}={a.Item2.ToString().Wrap()}"));
         }
 
         public static int GetSeekSeconds(long videoLengthSeconds)

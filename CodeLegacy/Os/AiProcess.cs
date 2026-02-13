@@ -402,9 +402,9 @@ namespace Flowframes.Os
                 rifeNcnnVs.StartInfo.Arguments = $"{baseArgs} && {vspipe} -c y4m - | {ffmpeg} {await Export.GetPipedFfmpegCmd(rt)}";
             }
 
-            Logger.Log($"cmd.exe {rifeNcnnVs.StartInfo.Arguments}", true);
-            rifeNcnnVs.OutputDataReceived += (sender, outLine) => { LogOutput("[O] " + outLine.Data, Implementations.rifeNcnnVs); };
-            rifeNcnnVs.ErrorDataReceived += (sender, outLine) => { LogOutput("[E] " + outLine.Data, Implementations.rifeNcnnVs, true); };
+            Logger.Log($"cmd.exe {rifeNcnnVs.StartInfo.Arguments}", true, toConsole: Cli.Verbose);
+            rifeNcnnVs.OutputDataReceived += (sender, outLine) => { LogOutput($"[O] {outLine.Data}", Implementations.rifeNcnnVs); };
+            rifeNcnnVs.ErrorDataReceived += (sender, outLine) => { LogOutput($"[E] {outLine.Data}".Replace("] Information: ", "] "), Implementations.rifeNcnnVs, true); };
             rifeNcnnVs.Start();
             rifeNcnnVs.BeginOutputReadLine();
             rifeNcnnVs.BeginErrorReadLine();

@@ -216,7 +216,7 @@ namespace Flowframes.Os
 
         public static async Task<string> GetOutputAsync(Process process, bool onlyLastLine = false)
         {
-            Logger.Log($"Getting output for {process.StartInfo.FileName} {process.StartInfo.Arguments}", true);
+            Logger.Log($"Getting output for {process.StartInfo.FileName} {process.StartInfo.Arguments}", true, toConsole: Cli.Verbose);
             NmkdStopwatch sw = new NmkdStopwatch();
 
             Stopwatch timeSinceLastOutput = new Stopwatch();

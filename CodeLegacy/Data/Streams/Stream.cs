@@ -9,11 +9,12 @@
         public string Codec = "";
         public string CodecLong = "";
         public string Language = "";
+        public string LanguageFmt => Language.Trim().IsEmpty() ? "N/A" : Language.Replace("und", "N/A").Upper();
         public string Title = "";
 
         public override string ToString()
         {
-            return $"Stream #{Index.ToString().PadLeft(2, '0')}{(IsDefault ? "*" : "")} - {Codec} {Type}";
+            return $"Stream #{Index.ToString().PadLeft(2, '0')}{(IsDefault ? "*" : " ")} {Type} ({Codec})";
         }
     }
 }

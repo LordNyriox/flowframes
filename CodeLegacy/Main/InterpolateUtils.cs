@@ -257,7 +257,9 @@ namespace Flowframes.Main
             if (print && factor < 1f)
                 Logger.Log($"Video is bigger than the maximum - Downscaling to {width}x{height}.");
 
-            Logger.Log($"Scaled input res {inputRes.Width}x{inputRes.Height} to {res.Width}x{res.Height} ({moduloMode})", true);
+            if(inputRes != res)
+                Logger.Log($"Scaled input resolution {inputRes.Width}x{inputRes.Height} to {res.Width}x{res.Height} (Modulo: {modulo}/{moduloMode})", true);
+
             return res;
         }
 
@@ -268,9 +270,7 @@ namespace Flowframes.Main
             if (divisibleBy == 0)
                 return numberInt;
 
-            return onlyRoundUp
-                ? (int)Math.Ceiling((double)number / divisibleBy) * divisibleBy
-                : (int)Math.Round((double)number / divisibleBy) * divisibleBy;
+            return onlyRoundUp ? (int)Math.Ceiling((double)number / divisibleBy) * divisibleBy : (int)Math.Round((double)number / divisibleBy) * divisibleBy;
         }
 
         public static bool CanUseAutoEnc(bool stepByStep, InterpSettings current)
@@ -279,46 +279,43 @@ namespace Flowframes.Main
 
             if (current.ai.Piped)
             {
-                Logger.Log($"Not Using AutoEnc: Using piped encoding.", true);
+                Logger.Log($"Auto-Encode is off: Not applicable for piped encoding.", true, toConsole: false);
                 return false;
             }
 
             if (current.outSettings.Format == Enums.Output.Format.Gif)
             {
-                Logger.Log($"Not Using AutoEnc: Using GIF output", true);
+                Logger.Log($"Auto-Encode is off: Not supported for {current.outSettings.Format.ToString().Upper()} output.", true);
                 return false;
             }
 
             if (stepByStep && !Config.GetBool(Config.Key.sbsAllowAutoEnc))
             {
-                Logger.Log($"Not Using AutoEnc: Using step-by-step mode, but 'sbsAllowAutoEnc' is false", true);
+                Logger.Log($"Auto-Encode is off: Using step-by-step mode, but {nameof(Config.Key.sbsAllowAutoEnc)} is false.", true);
                 return false;
             }
 
             if (!stepByStep && Config.GetInt(Config.Key.autoEncMode) == 0)
             {
-                Logger.Log($"Not Using AutoEnc: 'autoEncMode' is 0", true);
+                Logger.Log($"Auto-Encode is off: Disabled in settings ({nameof(Config.Key.autoEncMode)}).", true);
                 return false;
             }
 
             int inFrames = IoUtils.GetAmountOfFiles(current.framesFolder, false);
             if (inFrames * current.interpFactor < (AutoEncode.chunkSize + AutoEncode.safetyBufferFrames) * 1.2f)
             {
-                Logger.Log($"Not Using AutoEnc: Input frames ({inFrames}) * factor ({current.interpFactor}) is smaller than (chunkSize ({AutoEncode.chunkSize}) + safetyBufferFrames ({AutoEncode.safetyBufferFrames}) * 1.2f)", true);
+                Logger.Log($"Auto-Encode is off: Not enough frames for chunking.", true);
                 return false;
             }
 
             return true;
         }
 
-        public static bool UseUhd()
+        public static bool UseUhd(Size? outputRes = null)
         {
-            return UseUhd(I.currentSettings.OutputResolution);
-        }
-
-        public static bool UseUhd(Size outputRes)
-        {
-            return outputRes.Height >= Config.GetInt(Config.Key.uhdThresh);
+            if (outputRes == null)
+                outputRes = I.currentSettings.OutputResolution;
+            return outputRes.Value.Height >= Config.GetInt(Config.Key.uhdThresh);
         }
 
         public static void FixConsecutiveSceneFrames(string sceneFramesPath, string sourceFramesPath)
@@ -358,7 +355,7 @@ namespace Flowframes.Main
 
         public static Fraction AskForFramerate(string mediaName, bool isImageSequence = true)
         {
-            string text = $"Please enter the source frame rate for{(isImageSequence ? " the image sequence" : "")} '{mediaName.Trunc(80)}'.";
+            string text = $"Please enter the source frame rate (before interpolation) for{(isImageSequence ? " the image sequence" : "")} '{mediaName.Trunc(80)}'.";
             var form = new PromptForm("Enter Frame Rate", text, "15");
             form.ShowDialog();
             return new Fraction(form.EnteredText);

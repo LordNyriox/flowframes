@@ -95,7 +95,7 @@ namespace Flowframes.Ui
         {
             targetFrames = target;
             Restart();
-            Logger.Log($"Starting GetProgressFromFfmpegLog() loop for log '{logFile}', target is {target} frames", true);
+            Logger.Log($"Starting loop for reading progress from log '{logFile}', target is {target} frames", true);
             UpdateInterpProgress(0, targetFrames);
 
             while (Program.busy)

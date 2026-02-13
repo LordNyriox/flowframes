@@ -136,7 +136,7 @@ namespace Flowframes.IO
         {
             string aiDir = ai.PkgDir;
 
-            Logger.Log($"DownloadModelFiles(string ai = {ai.NameInternal}, string model = {modelDir}, bool log = {log})", true);
+            Logger.Log($"Loading model files for {ai.NameInternal} - Model: {modelDir}", true);
 
             try
             {

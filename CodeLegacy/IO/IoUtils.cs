@@ -787,7 +787,7 @@ namespace Flowframes.IO
             }
 
             if (log)
-                Logger.Log($"Computed {hashType} for '{Path.GetFileNameWithoutExtension(path).Trunc(40) + Path.GetExtension(path)}' ({GetFilesizeStr(path)}): {hashStr} ({sw})", true);
+                Logger.Log($"Computed {hashType} for '{Path.GetFileNameWithoutExtension(path).Trunc(40) + Path.GetExtension(path)}' ({GetFilesizeStr(path)}): {hashStr} ({sw})", true, toConsole: Cli.Verbose);
 
             return hashStr;
         }

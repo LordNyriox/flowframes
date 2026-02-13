@@ -494,5 +494,11 @@ namespace Flowframes
 
             return strings.Any(v => s.ToString().Equals(v.ToString(), strComp));
         }
+
+        /// <summary> Returns <paramref name="or"/> if the string is null or empty, otherwise returns the original string. </summary>
+        public static string Or (this string s, string or = "")
+        {
+            return string.IsNullOrEmpty(s) ? or : s;
+        }
     }
 }

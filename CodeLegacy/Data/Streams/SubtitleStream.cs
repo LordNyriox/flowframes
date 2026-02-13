@@ -16,9 +16,8 @@
 
         public override string ToString()
         {
-            string lang = string.IsNullOrWhiteSpace(Language.Trim()) ? "?" : Language;
             string ttl = string.IsNullOrWhiteSpace(Title.Trim()) ? "None" : Title;
-            return $"{base.ToString()} - Language: {lang} - Title: {ttl} - Bitmap-based: {Bitmap.ToString().ToTitleCase()}";
+            return $"{base.ToString()} - Language: {LanguageFmt} - Title: {ttl} - Bitmap-based: {Bitmap.ToString().ToTitleCase()}";
         }
     }
 }

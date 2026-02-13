@@ -106,7 +106,7 @@ namespace Flowframes
 
             if (canceled) return;
 
-            Program.mainForm.Invoke(() => Program.mainForm.SetStatus("Downloading models..."));
+            Program.mainForm.Invoke(() => Program.mainForm.SetStatus("Loading model..."));
             await ModelDownloader.DownloadModelFiles(currentSettings.ai, currentSettings.model.Dir);
 
             if (canceled) return;

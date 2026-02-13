@@ -22,8 +22,11 @@
 
         public override string ToString()
         {
-            string title = string.IsNullOrWhiteSpace(Title.Trim()) ? "None" : Title;
-            return $"{base.ToString()} - Language: {Language} - Title: {title} - Kbps: {Kbits} - SampleRate: {SampleRate} - Channels: {Channels} - Layout: {Layout}";
+            string title = string.IsNullOrWhiteSpace(Title) ? " - Untitled" : $" - '{Title}'";
+            string bitrate = Kbits > 0 ? $" - Kbps: {Kbits}" : "";
+            string sampleRate = SampleRate > 0 ? $" - Rate: {(SampleRate / 1000).ToString("0.0#")} kHz" : "";
+            string layout = Layout.IsNotEmpty() ? $" [{Layout.Replace("(", " ").Replace(")", " ").Trim()}]" : "";
+            return $"{base.ToString()} - Language: {LanguageFmt}{title}{bitrate}{sampleRate} - Channels: {Channels}{layout}";
         }
     }
 }

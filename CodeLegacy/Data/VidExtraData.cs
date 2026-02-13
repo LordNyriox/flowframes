@@ -23,7 +23,7 @@ namespace Flowframes.Data
 
         public bool HasAllColorValues => ColSpace.IsNotEmpty() && ColRange.IsNotEmpty() && ColTransfer.IsNotEmpty() && ColPrimaries.IsNotEmpty();
         public bool HasAnyColorValues => ColSpace.IsNotEmpty() || ColRange.IsNotEmpty() || ColTransfer.IsNotEmpty() || ColPrimaries.IsNotEmpty();
-        public string ColorsStr => $"Color Primaries {(ColPrimaries.IsEmpty() ? "unset" : ColPrimaries)}, Space {(ColSpace.IsEmpty() ? "unset" : ColSpace)}, Transfer {(ColTransfer.IsEmpty() ? "unset" : ColTransfer)}, Range {(ColRange.IsEmpty() ? "unset" : ColRange)}";
+        public string ColorsStr => $"Color Primaries {ColPrimaries.Or("unset")}, Colorspace {ColSpace.Or("unset")}, Transfer {ColTransfer.Or("unset")}, Color Range {ColRange.Or("unset")}";
 
         public VidExtraData() { }
 
@@ -70,7 +70,7 @@ namespace Flowframes.Data
                 }
             }
 
-            Logger.Log($"{ColorsStr}; SAR {Sar.Wrap()}, DAR {Dar.Wrap()}, Rot. {Rotation}", true, false, "ffmpeg");
+            Logger.Log($"{ColorsStr}; SAR {Sar.Wrap()}, DAR {Dar.Wrap()}{(Rotation != 0 ? $", Rotation {Rotation}°" : "")}", true, false, "ffmpeg");
         }
 
         // FFmpeg -colorspace (matrix coefficients)

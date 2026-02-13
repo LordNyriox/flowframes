@@ -30,7 +30,7 @@ namespace Flowframes.Magick
 
             string[] framesLines = fileContent.SplitIntoLines();     // Array with frame filenames
 
-            string oldStatus = Program.mainForm.GetStatus();
+            string oldStatus = Program.mainForm.Status;
 
             if (setStatus)
                 Program.mainForm.SetStatus("Blending scene transitions...");

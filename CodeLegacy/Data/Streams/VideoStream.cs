@@ -36,7 +36,7 @@ namespace Flowframes.Data.Streams
 
         public override string ToString()
         {
-            return $"{base.ToString()} - Language: {Language} - Color Format: {PixelFormat} - Size: {Resolution.Width}x{Resolution.Height} - FPS: {Rate}";
+            return $"{base.ToString()} - Language: {LanguageFmt} - Pixel Format: {PixelFormat} - Size: {Resolution.Width}x{Resolution.Height} - FPS: {Rate}";
         }
     }
 }

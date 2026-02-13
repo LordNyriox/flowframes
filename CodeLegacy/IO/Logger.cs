@@ -45,9 +45,9 @@ namespace Flowframes
         private static ConcurrentQueue<LogEntry> logQueue = new ConcurrentQueue<LogEntry>();
         private static readonly string _logPath = Paths.GetLogPath();
 
-        public static void Log(string msg, bool hidden = false, bool replaceLastLine = false, string filename = "", bool toConsole = true)
+        public static void Log(object msg, bool hidden = false, bool replaceLastLine = false, string filename = "", bool toConsole = true)
         {
-            logQueue.Enqueue(new LogEntry(msg, hidden, replaceLastLine, filename, toConsole));
+            logQueue.Enqueue(new LogEntry(msg.ToString(), hidden, replaceLastLine, filename, toConsole));
             ShowNext();
         }
 
@@ -73,7 +73,7 @@ namespace Flowframes
                 _lastUi = msg;
 
             if (entry.toConsole)
-                Console.WriteLine(msg);
+                Console.WriteLine(entry.hidden ? msg : $"\u001b[96m{msg}\u001b[0m");
 
             try
             {

@@ -93,7 +93,7 @@ namespace Flowframes.Media
             if (!noCache && filesize > 0 && cmdCache.ContainsKey(hash))
                 return cmdCache[hash];
 
-            Logger.Log($"GetVideoInfo: '{path}' (not cached)", true, false, "ffmpeg");
+            Logger.Log($"GetVideoInfo: '{path}' (not cached)", true, false, "ffmpeg", toConsole: Cli.Verbose);
             string output = await OsUtils.GetOutputAsync(process);
             cmdCache.Add(hash, output);
             return output;

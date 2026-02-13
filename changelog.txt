@@ -1,3 +1,18 @@
+Flowframes 1.42.0 Changelog:
+New: Support for HDR video interpolation (bt.2020)
+New: Support for Alpha (Transparency) with RIFE NCNN VS with various formats
+New: Per-track compatibility logic to copy, drop, or re-encode audio/subtitles
+New: Allow interpolation below 2x for RIFE NCNN VS - Experimental!
+Improved: Better, more descriptive and less redundant error messages
+Improved: Lots of GUI improvements, better error message boxes, more
+Improved: CLI improvements, e.g. ability to view help text quickly
+Improved: The main log box text can now be zoomed using Ctrl+Mousewheel
+Improved: Handle cases where EA's Javelin Anticheat would crash Flowframes
+Improved: Much, much cleaner logging + less clutter in CLI mode
+Fixed: Certain rotated videos would be stretched/skewed
+Fixed: Very long lines of text could get cut off in message boxes
+
+
 Flowframes 1.41.0 Changelog:
 - New: Added new RIFE models up to 4.26
 - New: Added support for variable framerate (VFR) inputs, preserving their frame timing

@@ -7,6 +7,9 @@ import glob
 import vapoursynth as vs
 core = vs.core
 
+def log(msg):
+    core.log_message(vs.MESSAGE_TYPE_INFORMATION, f"[VS] {msg}")
+
 # Vars from command line (via VSPipe)
 input_path = globals().get("input", "")
 temp_dir_path = globals().get("tmpDir", "")
@@ -47,8 +50,9 @@ outfps_res_num, outfps_res_den = map(int, fps_out_resampled.split('/'))
 res_scaled_x, res_scaled_y = map(int, res_scaled.split('x')) # Scaled resolution
 pad_x, pad_y = map(int, pad.split('x')) # Padding right/bottom
 txt_scale = max(1, min(res_scaled_x // 1000, 4)) # Text scale = scaled width divided by 1000, rounded to int, and clamped to 1-4
-
 frames_produced_total = 0
+
+log(f"Loading {'frames' if frames else 'video'} from '{frames_dir if frames else input_path}'")
 
 # Load frames or video
 if frames:
@@ -59,13 +63,16 @@ if frames:
     clip = core.imwri.Read(rf"{pattern}", firstnum=int(first))   # Load the image sequence with imwri
     clip = core.std.AssumeFPS(clip, fpsnum=infps_num, fpsden=infps_den)  # Set the frame rate for the image sequence
 else:
-    clip = core.lsmas.LWLibavSource(input_path, cachefile=cache_file) # Load video with lsmash
+    clip = core.ffms2.Source(input_path, cachefile=cache_file) # Load video with ffms2
     if alpha:
         clip = core.std.PropToClip(clip, prop='_Alpha') # Process only alpha channel
 
 width_src = clip.width  # Input resolution width
 height_src = clip.height  # Input resolution height
 framecount_src = len(clip)  # Amount of source frames
+chroma420 = "420" in clip.format.name # Store if input is 4:2:0 subsampled
+log(f"Input loaded: {clip.width}x{clip.height} at ~{(clip.fps.numerator / clip.fps.denominator):.3f} FPS, {clip.format.name}, {clip.num_frames} frames")
+
 reordered_clip = clip[0]
 
 # Deduplication
@@ -88,44 +95,50 @@ if loop and not frames:
 
 # Store properties of the first frame for later use
 first_frame_props = clip.get_frame(0).props
-c_matrix = '709'
+c_matrix = override_color_matrix # Use provided matrix if available
 
-try:
-    m = first_frame_props._Matrix
-    if override_color_matrix: c_matrix = override_color_matrix
-    elif m == 0:  c_matrix = 'rgb'
-    elif m == 4:  c_matrix = 'fcc'
-    elif m == 5:  c_matrix = '470bg'
-    elif m == 6:  c_matrix = '170m'
-    elif m == 7:  c_matrix = '240m'
-    elif m == 8:  c_matrix = 'ycgco'
-    elif m == 9:  c_matrix = '2020ncl'
-    elif m == 10: c_matrix = '2020cl'
-    elif m == 12: c_matrix = 'chromancl'
-    elif m == 13: c_matrix = 'chromacl'
-    elif m == 14: c_matrix = 'ictcp'
-except:
-    c_matrix = '709'
+if not c_matrix:
+    c_matrix = '709' # Default to bt709
+    try:
+        m = first_frame_props._Matrix
+        if m == 0:  c_matrix = 'rgb'
+        elif m == 4:  c_matrix = 'fcc'
+        elif m == 5:  c_matrix = '470bg'
+        elif m == 6:  c_matrix = '170m'
+        elif m == 7:  c_matrix = '240m'
+        elif m == 8:  c_matrix = 'ycgco'
+        elif m == 9:  c_matrix = '2020ncl'
+        elif m == 10: c_matrix = '2020cl'
+        elif m == 12: c_matrix = 'chromancl'
+        elif m == 13: c_matrix = 'chromacl'
+        elif m == 14: c_matrix = 'ictcp'
+    except:
+        log(f"Warning: Could not get color matrix from clip properties, defaulting to {c_matrix}")
 
 # Store color range (same as first frame)
-col_range = 'full' if first_frame_props.get('_ColorRange') == 0 else 'limited'
+col_range = 'full' if first_frame_props.get('_ColorRange', 0) == 0 else 'limited'
+log(f"Color matrix: {c_matrix} ({'override' if override_color_matrix else 'auto-detected'}), range: {col_range}")
 
 resize = res_scaled and res_scaled != "0x0" and res_scaled != f"{width_src}x{height_src}"
 res_w = res_scaled_x if resize else width_src
 res_h = res_scaled_y if resize else height_src
+scd = sc_sens > 0.01
 
 # Scene change detection
-if sc_sens > 0.01:
+if scd:
+    log(f"Scene detection enabled with sensitivity {sc_sens}")
     clip = core.misc.SCDetect(clip=clip, threshold=sc_sens)
 
 # Convert to RGBS from YUV or RGB
-colors = "YUV" if clip.format.color_family == vs.YUV else "RGB"
-if colors == "YUV":
+colors_in = "YUV" if clip.format.color_family == vs.YUV else "RGB"
+if colors_in == "YUV":
+    log(f"Converting YUV to RGBS using matrix {c_matrix}, range {col_range}")
     clip = core.resize.Bicubic(clip=clip, format=vs.RGBS, matrix_in_s=c_matrix, range_s=col_range, width=res_w, height=res_h)
 else:
+    log(f"Converting RGB to RGBS")
     clip = core.resize.Bicubic(clip=clip, format=vs.RGBS, width=res_w, height=res_h)
 
-info_str = f"FPS Inp: {fps_in}\nFPS Out: {fps_out}\nFPS Rsp: {fps_out_resampled}\nRes Inp: {width_src}x{height_src}\nRes Scl: {res_scaled}\nPad: {pad}\nColors: {colors} {col_range}\nDe/Redupe: {dedupe}/{dedupe and allow_redupe}\n"
+info_str = f"FPS Inp: {fps_in}\nFPS Out: {fps_out}\nFPS Rsp: {fps_out_resampled}\nRes Inp: {width_src}x{height_src}\nRes Scl: {res_scaled}\nPad: {pad}\nIn Colors: {colors_in} {col_range}\nDe/Redupe: {dedupe}/{dedupe and allow_redupe}\n"
 info_str += f"Loop: {loop}\nScn Detect: {sc_sens}\nMatch Dur: {match_duration}\nTrim: {trim}"
 
 # Padding to achieve a compatible resolution (some models need a certain modulo)
@@ -152,9 +165,13 @@ clip = core.std.FrameEval(clip, functools.partial(on_frame_in, clip=clip))
 
 # RIFE Interpolation
 r_fac_num, r_fac_den = map(int, factor.split('/'))
-clip = core.rife.RIFE(clip, factor_num=r_fac_num, factor_den=r_fac_den, model_path=r_mdlpath, gpu_id=(None if r_gpu < 0 else r_gpu), gpu_thread=r_threads, tta=r_tta, uhd=r_uhd, sc=sc_sens > 0.01)
+fac_float = r_fac_num / r_fac_den
+gpu = None if r_gpu < 0 else r_gpu # GPU ID or None for auto
+log(f"Interpolation - {fac_float}x ({fps_in} -> {fps_out} -> {fps_out_resampled}) - GPU {gpu if gpu is not None else 'auto'} - UHD {r_uhd}")
+clip = core.rife.RIFE(clip, factor_num=r_fac_num, factor_den=r_fac_den, model_path=r_mdlpath, gpu_id=gpu, gpu_thread=r_threads, tta=r_tta, uhd=r_uhd, sc=scd)
 
 frm_count_after_interp = len(clip)
+log(f"Frames source/input/output: {framecount_src} -> {pre_interp_frames} -> {frm_count_after_interp}")
 
 # Reduplication
 if dedupe and allow_redupe and not realtime:
@@ -166,10 +183,19 @@ if dedupe and allow_redupe and not realtime:
     clip = reordered_clip.std.Trim(1, reordered_clip.num_frames - 1) # Redupe trim
 
 frm_count_after_redupe = len(clip)
-info_str += f"\nBefore/After RD: {frm_count_after_interp}/{frm_count_after_redupe}"
+
+if frm_count_after_redupe != frm_count_after_interp:
+    log(f"Frames before/after redupe: {frm_count_after_interp}/{frm_count_after_redupe}")
+    info_str += f"\nBefore/After RD: {frm_count_after_interp}/{frm_count_after_redupe}"
 
 # Set output format & color matrix
-clip = vs.core.resize.Bicubic(clip, format=vs.YUV444P16, matrix_s=c_matrix) if not alpha else vs.core.resize.Bicubic(clip, format=vs.GRAY8, matrix_s=c_matrix)
+if not alpha:
+    out_format = vs.YUV420P16 if chroma420 else vs.YUV444P16 # No need to convert to 444 if input is already subsampled
+    log(f"Converting RGBS back to {out_format.name} using matrix {c_matrix}")
+    clip = core.resize.Bicubic(clip, format=out_format, matrix_s=c_matrix) # RGB: 16-bit YUV
+else:
+    log(f"Converting RGBS back to GRAY8 using matrix {c_matrix}")
+    clip = core.resize.Bicubic(clip, format=vs.GRAY8, matrix_s=c_matrix) # Alpha: Single channel
 
 # Undo compatibility padding by cropping the same area
 if pad_x > 0 or pad_y > 0:
@@ -182,8 +208,10 @@ target_count_true = target_count_match - end_dupe_count
 
 if not dedupe:
     if loop:
+        log(f"Trimming to match target frame count {target_count_match} (loop enabled - end fill dupes: {end_dupe_count})")
         clip = clip.std.Trim(length=target_count_match) # Trim, loop enabled
     elif match_duration:
+        log(f"Trimming to true output frame count {target_count_match} (match duration enabled - end fill dupes: {end_dupe_count})")
         clip = clip.std.Trim(length=target_count_true) # Trim, loop disabled, duration matching disabled
 
 # OSD Variables
@@ -229,10 +257,11 @@ if show_frame_nums:
 
 # Frames picked to resample VFR video to fps_out_resampled
 if os.path.isfile(vfr_resample_json_path):
+    log(f"Resampling VFR clip")
     with open(vfr_resample_json_path) as json_file:
         frame_indexes = json.load(json_file)
         clip = core.std.Splice([clip[i] for i in frame_indexes if i < len(clip)])
-
+ 
 # if fps_out_resampled != fps_out and outfps_res_num > 0 and outfps_res_den > 0:
 #     clip = core.std.AssumeFPS(clip, fpsnum=outfps_res_num, fpsden=outfps_res_den)
 
@@ -240,4 +269,4 @@ if os.path.isfile(vfr_resample_json_path):
 if realtime and loop:
     clip = clip.std.Loop(0)
 
-clip.set_output()
+clip.set_output(0)

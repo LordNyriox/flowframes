@@ -42,7 +42,7 @@ namespace Flowframes
             return wrap ? filters.Wrap() : filters;
         }
 
-        public enum ModuloMode { Disabled, ForInterpolation, ForEncoding }
+        public enum ModuloMode { Any, ForInterpolation, ForEncoding }
 
         public static int GetModulo(ModuloMode mode)
         {
@@ -174,7 +174,7 @@ namespace Flowframes
             if (mediaFile.InputTimestamps.Any())
                 return;
 
-            Logger.Log($"Checking frame timing...", true, false, "ffmpeg");
+            Logger.Log($"[VFR Check] Checking frame timing...", true, false, "ffmpeg");
 
             if (outputLinesPackets == null)
             {
@@ -222,30 +222,34 @@ namespace Flowframes
             float avgDuration = timestampDurations.Average();
             float maxDeviationMs = (timestampDurations.Max() - timestampDurations.Min()) * 1000f;
             float maxDeviationPercent = ((timestampDurations.Max() / timestampDurations.Min()) * 100f) - 100;
+            string maxDevPercentStr = maxDeviationPercent.ToString("0.##") + "%";
+            string maxDevMsStr = maxDeviationMs.ToString("0.###") + " ms";
             // float maxDeviationMsResampled = (timestampDurationsRes.Max() - timestampDurationsRes.Min()) * 1000f;
-            Logger.Log($"[VFR Check] Timestamp durations - Min: {timestampDurations.Min() * 1000f} ms - Max: {timestampDurations.Max() * 1000f} ms - Avg: {avgDuration * 1000f} - Biggest deviation: {maxDeviationMs.ToString("0.##")} ms", hidden: true);
+            Logger.Log($"[VFR Check] Timestamp durations - Min: {timestampDurations.Min() * 1000f} ms - Max: {timestampDurations.Max() * 1000f} ms - Avg: {avgDuration * 1000f} - Largest deviation: {maxDeviationMs.ToString("0.##")} ms", hidden: true);
             // Logger.Log($"Resampled - Min ts duration: {timestampDurationsRes.Min() * 1000f} ms - Max ts duration: {timestampDurationsRes.Max() * 1000f} ms - Biggest deviation: {maxDeviationMsResampled.ToString("0.##")} ms", hidden: true);
 
             mediaFile.InputTimestampDurations = new List<float>(timestampDurations);
 
             if (Config.GetInt(Config.Key.vfrHandling) == 1)
             {
-                Logger.Log($"Ignoring VFR deviation threshold of {maxDeviationPercent.ToString("0.##")}%, force-enabling VFR mode due to settings");
+                Logger.Log($"Ignoring VFR deviation threshold of {maxDevPercentStr}, force-enabling VFR mode due to settings");
                 mediaFile.IsVfr = true;
                 return;
             }
             else if (Config.GetInt(Config.Key.vfrHandling) == 2)
             {
-                Logger.Log($"Ignoring VFR deviation threshold of {maxDeviationPercent.ToString("0.##")}%, force-disabling VFR mode due to settings");
+                Logger.Log($"Ignoring VFR deviation threshold of {maxDevPercentStr}, force-disabling VFR mode due to settings");
                 mediaFile.IsVfr = false;
                 return;
             }
 
             if (maxDeviationPercent > 20f)
             {
-                Logger.Log($"[VFR Check] Max timestamp deviation is {maxDeviationPercent.ToString("0.##")}% or {maxDeviationMs} ms - Assuming VFR input!", hidden: true);
+                Logger.Log($"[VFR Check] Max timestamp deviation is {maxDevPercentStr} ({maxDevMsStr}) - Assuming VFR input!", hidden: true);
                 mediaFile.IsVfr = true;
             }
+
+            Logger.Log($"[VFR Check] Max timestamp deviation is only {maxDevPercentStr} ({maxDevMsStr}) - Assuming CFR input.", hidden: true);
         }
 
         public static async Task<Fraction> GetFramerate(string inputFile, bool preferFfmpeg = false)

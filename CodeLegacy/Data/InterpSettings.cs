@@ -62,7 +62,7 @@ namespace Flowframes
             get
             {
                 if (_scaledResolution.IsEmpty)
-                    _scaledResolution = InterpolateUtils.GetInterpolationResolution(FfmpegCommands.ModuloMode.Disabled, InputResolution);
+                    _scaledResolution = InterpolateUtils.GetInterpolationResolution(FfmpegCommands.ModuloMode.Any, InputResolution);
                 return _scaledResolution;
             }
         }
@@ -97,7 +97,7 @@ namespace Flowframes
             _inputResolution = new Size(0, 0);
             noRedupe = dedupe && interpFactor == 1;
             SetPaths(inPath);
-            RefreshExtensions(ai: ai);
+            RefreshExtensions(ai: ai, settings: this);
         }
 
         private void SetPaths(string inputPath)
@@ -119,13 +119,13 @@ namespace Flowframes
             {
                 if (Interpolate.currentMediaFile != null && !Interpolate.currentMediaFile.MayHaveAlpha)
                 {
-                    Logger.Log($"RefreshAlpha: Input video does not have alpha channel.", true);
+                    Logger.Log($"[RefreshAlpha] Input video does not have alpha channel.", true, toConsole: Cli.Verbose);
                     return;
                 }
 
                 string noAlphaReason = CantUseAlphaReason(vs);
                 alpha = string.IsNullOrEmpty(noAlphaReason);
-                Logger.Log($"RefreshAlpha: Alpha {(alpha ? "enabled" : $"disabled: {noAlphaReason}")}", true);
+                Logger.Log($"[RefreshAlpha] Alpha {(alpha ? "enabled" : $"disabled: {noAlphaReason}")}", true);
 
                 if (!alpha)
                 {
@@ -138,7 +138,7 @@ namespace Flowframes
             }
             catch (Exception e)
             {
-                Logger.Log("RefreshAlpha Error: " + e.Message, true);
+                Logger.Log("[RefreshAlpha] Error: " + e.Message, true);
                 alpha = false;
             }
         }
@@ -153,10 +153,10 @@ namespace Flowframes
 
             var supportedEncoders = new List<Enc> { Enc.Png, Enc.Gif, Enc.Webp, Enc.Exr, Enc.Tiff, Enc.ProResKs, Enc.VpxVp9, Enc.Ffv1, Enc.Huffyuv };
 
-            if(!supportedEncoders.Contains(outSettings.Encoder))
+            if (!supportedEncoders.Contains(outSettings.Encoder))
                 return $"Selected encoder ({Strings.Encoder.Get($"{outSettings.Encoder}", returnKeyInsteadOfEmptyString: true)}) does not support alpha.";
 
-            if(!OutputUtils.AlphaFormats.Contains(outSettings.PixelFormat))
+            if (!OutputUtils.AlphaFormats.Contains(outSettings.PixelFormat))
                 return $"Selected pixel format ({Strings.PixelFormat.Get($"{outSettings.PixelFormat}", returnKeyInsteadOfEmptyString: true)}) does not support alpha.";
 
             return "";
@@ -164,7 +164,7 @@ namespace Flowframes
 
         public enum FrameType { Import, Interp, Both };
 
-        public void RefreshExtensions(FrameType type = FrameType.Both, AiInfo ai = null)
+        public void RefreshExtensions(FrameType type = FrameType.Both, AiInfo ai = null, InterpSettings settings = null)
         {
             if (ai == null)
             {
@@ -173,6 +173,10 @@ namespace Flowframes
 
                 ai = Interpolate.currentSettings.ai;
             }
+
+            // If using piped interpolation and both input & output are video formats, no frame I/O is involved, making this irrelevant
+            if (ai.Piped && settings != null && !settings.inputIsFrames && settings.outSettings != null && settings.outSettings.Format != Enums.Output.Format.Images)
+                return;
 
             bool pngOutput = outSettings.Encoder == Enc.Png;
             bool aviHqChroma = outSettings.Format == Enums.Output.Format.Avi && OutputUtils.AlphaFormats.Contains(outSettings.PixelFormat);
