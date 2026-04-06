@@ -1,11 +1,10 @@
 name: Build
 on:
   push:
-    branches:
-  #    - main
-      - actions
-  #pull_request:
-  #  branches: [ main ]
+#    branches:
+#      - main
+#  pull_request:
+#    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -18,13 +17,12 @@ env:
   BUILD_CONFIGURATION: Release
 
   # Python version to embed.
-  PYTHON_MINOR: 11
-  PYTHON_PATCH: 14
+  PYTHON_MINOR: 12
+  PYTHON_PATCH: 13
   # Python version to use for building.
-  PYTHON_PATCH_SYS: 9
+  PYTHON_PATCH_SYS: 10
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:  # Cancel running jobs if new commits are pushed
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -34,9 +32,12 @@ jobs:
   build:
     runs-on: windows-latest
 
+    permissions:
+      contents: read
+
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         persist-credentials: false
 
@@ -52,10 +53,10 @@ jobs:
         python-version: 3.${{env.PYTHON_MINOR}}.${{env.PYTHON_PATCH_SYS}}
 
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
 
     - name: Add NuGet to PATH
-      uses: nuget/setup-nuget@v2
+      uses: nuget/setup-nuget@v3
 
     - name: Embed Python
       working-directory: .\pkgs
@@ -67,10 +68,10 @@ jobs:
     - name: Embed PyTorch
       run: |
         cd .\pkgs\py-amp
-        .\python.exe -m pip uninstall torch torchvision torchaudio numpy
+        .\python.exe -m pip uninstall torch torchvision torchaudio numpy vapoursynth
         .\python.exe -m pip install "numpy<2.3.0,>=2"
-        .\python.exe -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu130
-        .\python.exe -m pip install opencv-python sk-video imageio
+        .\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+        .\python.exe -m pip install opencv-python sk-video imageio vapoursynth
     - name: NuGet Restore
       run: nuget restore ${{env.SOLUTION_FILE_PATH}}
 
@@ -85,8 +86,9 @@ jobs:
       run: cmd /C CALL PackageBuild.bat ${{steps.vars.outputs.sha_short}} N Y N
 
     - name: Upload Package
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
+        archive: false
         if-no-files-found: error
         name: FF-${{steps.vars.outputs.sha_short}}-Full
         path: ./Build/FF-${{steps.vars.outputs.sha_short}}-Full-RTX3000.7z
